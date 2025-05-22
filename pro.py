@@ -208,3 +208,33 @@ fig_vol.update_layout(title=f"Rolling {window_vol}-Day Volatility of Returns",
                       template="plotly_white")
 st.plotly_chart(fig_vol)
 
+# ---------------------------
+# Descriptive Statistics
+# ---------------------------
+st.subheader("📊 Descriptive Analysis")
+
+# Summary stats
+st.write("### Statistical Summary of Closing Prices")
+st.dataframe(data["close"].describe().rename("Closing Price Stats"))
+
+# Histogram of close prices
+st.write("### Histogram of Closing Prices")
+fig_hist = px.histogram(data, x="close", nbins=50, title="Distribution of Closing Prices")
+st.plotly_chart(fig_hist)
+
+# Rolling metrics
+st.write("### Rolling Mean and Standard Deviation")
+window_size = st.slider("Select Rolling Window Size (days)", 5, 60, 20)
+
+data["Rolling Mean"] = data["close"].rolling(window_size).mean()
+data["Rolling Std"] = data["close"].rolling(window_size).std()
+
+fig_rolling = go.Figure()
+fig_rolling.add_trace(go.Scatter(x=data.index, y=data["close"], name="Close", line=dict(color='blue')))
+fig_rolling.add_trace(go.Scatter(x=data.index, y=data["Rolling Mean"], name="Rolling Mean", line=dict(color='orange')))
+fig_rolling.add_trace(go.Scatter(x=data.index, y=data["Rolling Std"], name="Rolling Std Dev", line=dict(color='green')))
+fig_rolling.update_layout(title="Rolling Mean and Standard Deviation",
+                          xaxis_title="Date", yaxis_title="Price / Std Dev")
+st.plotly_chart(fig_rolling)
+
+
