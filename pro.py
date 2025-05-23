@@ -211,7 +211,7 @@ st.plotly_chart(fig_vol)
 # ---------------------------
 # Descriptive Statistics
 # ---------------------------
-st.subheader("📊 Descriptive Analysis")
+st.subheader(" Descriptive Analysis")
 
 # Summary stats
 st.write("### Statistical Summary of Closing Prices")
