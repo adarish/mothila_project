@@ -238,31 +238,6 @@ fig_rolling.update_layout(title="Rolling Mean and Standard Deviation",
 st.plotly_chart(fig_rolling)
 
 #new
-st.subheader("📈 Monte Carlo Strategy Simulation")
-
-n_sim = st.slider("Number of simulations", 100, 2000, 500)
-n_days = st.slider("Forecast Days", 10, 252, 100)
-strategy_choice = st.selectbox("Select Strategy", ["Moving Average Crossover", "RSI Strategy", "Bollinger Bands", "MACD Crossover"])
-
-mu = log_ret.mean()
-sigma = log_ret.std()
-last_price = data["close"].iloc[-1]
-
-# Choose strategy function
-if strategy_choice == "Moving Average Crossover":
-    final_vals = simulate_strategy(last_price, mu, sigma, n_days, n_sim, apply_moving_average_strategy, short_window=short_window, long_window=long_window)
-elif strategy_choice == "RSI Strategy":
-    final_vals = simulate_strategy(last_price, mu, sigma, n_days, n_sim, apply_rsi_strategy)
-elif strategy_choice == "Bollinger Bands":
-    final_vals = simulate_strategy(last_price, mu, sigma, n_days, n_sim, apply_bollinger_strategy)
-elif strategy_choice == "MACD Crossover":
-    final_vals = simulate_strategy(last_price, mu, sigma, n_days, n_sim, apply_macd_strategy)
-
-# Show results
-st.write(f"📈 **Mean Final Strategy Value**: {final_vals.mean():.2f}")
-st.write(f"🔻 5% VaR (Strategy): {np.percentile(final_vals, 5):.2f}")
-fig = px.histogram(final_vals, nbins=50, title="Final Strategy Value Distribution")
-st.plotly_chart(fig)
 
 
 
