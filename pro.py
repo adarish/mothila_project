@@ -244,9 +244,9 @@ n_sim = st.slider("Number of simulations", 100, 2000, 500)
 n_days = st.slider("Forecast Days", 10, 252, 100)
 strategy_choice = st.selectbox("Select Strategy", ["Moving Average Crossover", "RSI Strategy", "Bollinger Bands", "MACD Crossover"])
 
-mu = log_returns.mean()
-sigma = log_returns.std()
-last_price = data["Close"].iloc[-1]
+mu = log_ret.mean()
+sigma = log_ret.std()
+last_price = data["close"].iloc[-1]
 
 # Choose strategy function
 if strategy_choice == "Moving Average Crossover":
