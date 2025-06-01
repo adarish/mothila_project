@@ -237,3 +237,137 @@ fig_rolling.update_layout(title="Rolling Mean and Standard Deviation",
                           xaxis_title="Date", yaxis_title="Price / Std Dev")
 st.plotly_chart(fig_rolling)
 #new
+
+# Monte Carlo Simulation - Stock Price Projection
+st.header("Monte Carlo Price Simulation")
+
+# Simulation parameters
+num_simulations = st.slider("Number of Simulations", 10, 200, 100, 
+                            help="Limited to 200 for performance stability")
+forecast_days = st.slider("Forecast Horizon (days)", 5, 365, 30)
+last_price = data['close'].iloc[-1]
+
+# Get historical log returns
+log_returns = np.log(1 + data['close'].pct_change().dropna())
+mu = log_returns.mean()
+sigma = log_returns.std()
+
+# Run simulations
+simulation_df = pd.DataFrame()
+ending_prices = []
+confidence_level = st.slider("Confidence Level for VaR", 90, 99, 95)
+
+with st.spinner(f"Running {num_simulations} simulations..."):
+    for i in range(num_simulations):
+        # Create Brownian motion
+        daily_returns = np.random.normal(mu, sigma, forecast_days)
+        
+        # Calculate price path
+        price_path = [last_price]
+        for r in daily_returns:
+            price_path.append(price_path[-1] * np.exp(r))
+            
+        # Store results
+        simulation_df[f"Sim_{i+1}"] = price_path
+        ending_prices.append(price_path[-1])
+        
+    st.success("Simulation completed!")
+
+# Calculate statistics
+avg_end_price = np.mean(ending_prices)
+min_end_price = np.min(ending_prices)
+max_end_price = np.max(ending_prices)
+median_end_price = np.median(ending_prices)
+
+# Calculate VaR
+sorted_prices = np.sort(ending_prices)
+var_index = int((100 - confidence_level)/100 * num_simulations)
+var_price = sorted_prices[var_index] if var_index < len(sorted_prices) else sorted_prices[0]
+
+# Display metrics
+st.subheader("Simulation Results")
+col1, col2, col3 = st.columns(3)
+col1.metric("Average Ending Price", f"${avg_end_price:.2f}")
+col2.metric("Median Ending Price", f"${median_end_price:.2f}")
+col3.metric(f"{confidence_level}% VaR Price", f"${var_price:.2f}")
+
+col4, col5, col6 = st.columns(3)
+col4.metric("Minimum Ending Price", f"${min_end_price:.2f}")
+col5.metric("Maximum Ending Price", f"${max_end_price:.2f}")
+col6.metric("Starting Price", f"${last_price:.2f}")
+
+# Plot all simulated paths
+st.subheader(f"Monte Carlo Price Projections ({num_simulations} paths)")
+fig = go.Figure()
+
+for col in simulation_df.columns:
+    fig.add_trace(go.Scatter(
+        x=np.arange(len(simulation_df)),
+        y=simulation_df[col],
+        mode='lines',
+        line=dict(width=1),
+        showlegend=False
+    ))
+
+# Add starting price marker
+fig.add_trace(go.Scatter(
+    x=[0],
+    y=[last_price],
+    mode='markers',
+    marker=dict(color='black', size=10),
+    name='Current Price'
+))
+
+# Add average path
+fig.add_trace(go.Scatter(
+    x=np.arange(len(simulation_df)),
+    y=simulation_df.mean(axis=1),
+    mode='lines',
+    line=dict(color='red', width=3),
+    name='Average Path'
+))
+
+# Add VaR path
+fig.add_trace(go.Scatter(
+    x=np.arange(len(simulation_df)),
+    y=[var_price] * len(simulation_df),
+    mode='lines',
+    line=dict(color='purple', width=3, dash='dash'),
+    name=f'{confidence_level}% VaR Level'
+))
+
+fig.update_layout(
+    title=f"{symbol} Price Projection ({forecast_days} days)",
+    xaxis_title="Trading Days",
+    yaxis_title="Price",
+    hovermode="x unified"
+)
+st.plotly_chart(fig)
+
+# Ending price distribution
+st.subheader("Ending Price Distribution")
+fig_dist = px.histogram(
+    x=ending_prices,
+    nbins=30,
+    labels={'x': 'Ending Price'},
+    title='Distribution of Simulated Ending Prices'
+)
+fig_dist.add_vline(x=avg_end_price, line_dash="dash", line_color="red", 
+                  annotation_text=f"Avg: ${avg_end_price:.2f}")
+fig_dist.add_vline(x=var_price, line_dash="dash", line_color="purple", 
+                  annotation_text=f"VaR: ${var_price:.2f}")
+st.plotly_chart(fig_dist)
+
+# Performance statistics table
+st.subheader("Performance Statistics")
+stats_df = pd.DataFrame({
+    "Metric": ["Mean Return", "Annualized Volatility", 
+               "Positive Return Probability", "Probability of >10% Return"],
+    "Value": [
+        f"{mu*252:.2%}", 
+        f"{sigma*np.sqrt(252):.2%}",
+        f"{(np.mean(np.array(ending_prices) > last_price)*100:.1f}%",
+        f"{(np.mean((np.array(ending_prices) - last_price)/last_price > 0.1)*100:.1f}%"
+    ]
+})
+st.table(stats_df)
