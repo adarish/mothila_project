@@ -359,15 +359,23 @@ fig_dist.add_vline(x=var_price, line_dash="dash", line_color="purple",
 st.plotly_chart(fig_dist)
 
 # Performance statistics table
+# Performance statistics table
 st.subheader("Performance Statistics")
+
+# Precompute values
+mean_return = mu * 252
+annual_vol = sigma * np.sqrt(252)
+positive_return_prob = np.mean(np.array(ending_prices) > last_price) * 100
+prob_10pct_return = np.mean((np.array(ending_prices) - last_price)/last_price > 0.1) * 100
+
 stats_df = pd.DataFrame({
     "Metric": ["Mean Return", "Annualized Volatility", 
                "Positive Return Probability", "Probability of >10% Return"],
     "Value": [
-        f"{mu*252:.2%}", 
-        f"{sigma*np.sqrt(252):.2%}",
-        f"{(np.mean(np.array(ending_prices) > last_price)*100:.1f}%",
-        f"{(np.mean((np.array(ending_prices) - last_price)/last_price > 0.1)*100:.1f}%"
+        f"{mean_return:.2%}", 
+        f"{annual_vol:.2%}",
+        f"{positive_return_prob:.1f}%",
+        f"{prob_10pct_return:.1f}%"
     ]
 })
 st.table(stats_df)
