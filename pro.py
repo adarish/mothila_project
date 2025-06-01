@@ -236,6 +236,125 @@ fig_rolling.add_trace(go.Scatter(x=data.index, y=data["Rolling Std"], name="Roll
 fig_rolling.update_layout(title="Rolling Mean and Standard Deviation",
                           xaxis_title="Date", yaxis_title="Price / Std Dev")
 st.plotly_chart(fig_rolling)
+#new
+# Monte Carlo Simulation Section
+st.header("Monte Carlo Simulation of Strategy Performance")
+
+# Simulation parameters
+num_simulations = st.slider("Number of Simulations", 100, 10000, 1000)
+forecast_days = st.slider("Forecast Horizon (days)", 5, 365, 30)
+
+# Get historical log returns
+log_returns = np.log(data['close'] / data['close'].shift(1)).dropna()
+mu, sigma = log_returns.mean(), log_returns.std()
+
+# Store simulation results
+strategy_returns = []
+market_returns = []
+
+# Function to apply strategy to simulated path
+def apply_strategy_to_path(simulated_prices):
+    # Create a copy of the strategy logic
+    sim_data = pd.DataFrame({'close': simulated_prices})
+    
+    # Recalculate strategy indicators
+    if strategy == "Moving Average Crossover":
+        sim_data["MA_Short"] = sim_data["close"].rolling(short).mean()
+        sim_data["MA_Long"] = sim_data["close"].rolling(long).mean()
+        sim_data["Signal"] = (sim_data["MA_Short"] > sim_data["MA_Long"]).astype(int)
+    
+    elif strategy == "RSI Strategy":
+        delta = sim_data["close"].diff()
+        gain = np.where(delta > 0, delta, 0)
+        loss = np.where(delta < 0, -delta, 0)
+        avg_gain = pd.Series(gain).rolling(period).mean()
+        avg_loss = pd.Series(loss).rolling(period).mean()
+        rs = avg_gain / avg_loss
+        sim_data["RSI"] = 100 - (100 / (1 + rs))
+        sim_data["Signal"] = ((sim_data["RSI"] < rsi_buy)).astype(int)
+    
+    elif strategy == "Bollinger Bands":
+        sim_data["MA"] = sim_data["close"].rolling(period).mean()
+        sim_data["Upper"] = sim_data["MA"] + stddev * sim_data["close"].rolling(period).std()
+        sim_data["Lower"] = sim_data["MA"] - stddev * sim_data["close"].rolling(period).std()
+        sim_data["Signal"] = (sim_data["close"] < sim_data["Lower"]).astype(int)
+    
+    elif strategy == "MACD Crossover":
+        ema12 = sim_data["close"].ewm(span=12, adjust=False).mean()
+        ema26 = sim_data["close"].ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
+        signal_line = macd.ewm(span=9, adjust=False).mean()
+        sim_data["MACD"] = macd
+        sim_data["Signal_Line"] = signal_line
+        sim_data["Signal"] = (sim_data["MACD"] > sim_data["Signal_Line"]).astype(int)
+    
+    # Calculate returns
+    sim_data['Daily Return'] = sim_data['close'].pct_change()
+    sim_data['Strategy Return'] = sim_data['Signal'].shift(1) * sim_data['Daily Return']
+    
+    # Calculate cumulative returns
+    cumulative_strategy = (1 + sim_data['Strategy Return'].dropna()).cumprod()
+    cumulative_market = (1 + sim_data['Daily Return'].dropna()).cumprod()
+    
+    return cumulative_strategy.iloc[-1] - 1, cumulative_market.iloc[-1] - 1
+
+# Run simulations
+progress_bar = st.progress(0)
+status_text = st.empty()
+
+for i in range(num_simulations):
+    # Generate random walk
+    daily_returns = np.random.normal(mu, sigma, forecast_days)
+    price_path = [data['close'].iloc[-1]]
+    
+    for r in daily_returns:
+        price_path.append(price_path[-1] * np.exp(r))
+    
+    # Apply strategy to the path
+    strat_return, market_return = apply_strategy_to_path(price_path)
+    strategy_returns.append(strat_return)
+    market_returns.append(market_return)
+    
+    # Update progress
+    progress = (i + 1) / num_simulations
+    progress_bar.progress(progress)
+    status_text.text(f"Running simulation {i+1}/{num_simulations}")
+
+# Calculate statistics
+avg_strategy_return = np.mean(strategy_returns)
+avg_market_return = np.mean(market_returns)
+strategy_win_rate = np.mean(np.array(strategy_returns) > np.array(market_returns)) * 100
+
+# Display results
+st.subheader("Simulation Results")
+col1, col2, col3 = st.columns(3)
+col1.metric("Avg. Strategy Return", f"{avg_strategy_return*100:.2f}%")
+col2.metric("Avg. Market Return", f"{avg_market_return*100:.2f}%")
+col3.metric("Strategy Win Rate", f"{strategy_win_rate:.1f}%")
+
+# Plot return distributions
+fig = go.Figure()
+fig.add_trace(go.Histogram(x=strategy_returns, name='Strategy Returns', opacity=0.7))
+fig.add_trace(go.Histogram(x=market_returns, name='Market Returns', opacity=0.7))
+fig.update_layout(
+    title="Return Distribution Comparison",
+    xaxis_title="Return",
+    yaxis_title="Frequency",
+    barmode='overlay'
+)
+st.plotly_chart(fig)
+
+# Show some sample paths
+st.subheader("Sample Simulated Price Paths")
+fig_paths = go.Figure()
+for i in range(5):  # Show 5 sample paths
+    daily_returns = np.random.normal(mu, sigma, forecast_days)
+    price_path = [data['close'].iloc[-1]]
+    for r in daily_returns:
+        price_path.append(price_path[-1] * np.exp(r))
+    fig_paths.add_trace(go.Scatter(y=price_path, mode='lines', name=f"Path {i+1}"))
+fig_paths.update_layout(title="Sample Price Paths", xaxis_title="Day", yaxis_title="Price")
+st.plotly_chart(fig_paths)
 
 #new
 
