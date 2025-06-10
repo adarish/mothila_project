@@ -135,7 +135,7 @@ sharpe = (
 )
 
 st.metric("📈 Total Strategy Return", f"{(cumulative_strategy.iloc[-1] - 1)*100:.2f}%")
-st.metric("📉 Total Market Return", f"{(cumulative_market.iloc[-1] - 1)*100:.2f}%")
+
 st.metric("📊 Sharpe Ratio", f"{sharpe:.2f}")
 
 # Buy/Sell Signals Plot
