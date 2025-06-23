@@ -211,16 +211,38 @@ st.plotly_chart(fig_vol)
 # ---------------------------
 # Descriptive Statistics
 # ---------------------------
+
+
+# ---------------------------
+# Descriptive Statistics
+# ---------------------------
 st.subheader(" Descriptive Analysis")
 
-# Summary stats
-st.write("### Statistical Summary of Closing Prices")
-st.dataframe(data["close"].describe().rename("Closing Price Stats"))
+# Calculate daily returns
+data['Daily Return'] = data['close'].pct_change()
+
+# Create a DataFrame for closing price statistics
+price_stats = data["close"].describe().rename("Closing Price Stats")
+return_stats = data['Daily Return'].describe().rename("Daily Return Stats")
+
+# Combine both statistics into one DataFrame
+combined_stats = pd.concat([price_stats, return_stats], axis=1)
+
+# Display the combined statistics table
+st.write("### Statistical Summary")
+st.dataframe(combined_stats)
 
 # Histogram of close prices
 st.write("### Histogram of Closing Prices")
 fig_hist = px.histogram(data, x="close", nbins=50, title="Distribution of Closing Prices")
 st.plotly_chart(fig_hist)
+
+# Histogram of daily returns
+st.write("### Histogram of Daily Returns")
+fig_ret_hist = px.histogram(data, x="Daily Return", nbins=50, 
+                            title="Distribution of Daily Returns",
+                            range_x=[-0.1, 0.1])  # Limit range to ±10%
+st.plotly_chart(fig_ret_hist)
 
 
 #new
