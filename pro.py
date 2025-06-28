@@ -66,11 +66,11 @@ nifty_close = nifty_data["close"]
 sp500_close = sp500_data["close"]
 
 # Align data indexes
-combined_df = pd.DataFrame({
-    symbol: data["close"],
-    "Nifty 50": nifty_close,
-    "S&P 500": sp500_close
-}).dropna()
+combined_df = pd.concat([
+    data["close"].rename(str(symbol)),
+    nifty_close.rename("Nifty 50"),
+    sp500_close.rename("S&P 500")
+], axis=1).dropna()
 
 # Strategy Implementation
 if strategy == "Moving Average Crossover":
